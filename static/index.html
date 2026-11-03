@@ -36,7 +36,80 @@
 @media(max-width:550px) {
   .stats {grid-template-columns: repeat(2, minmax(0, 1fr));}
 }
-</style></head><body><main>
+</style>
+
+<style>
+.lf-modal[hidden], .lf-form-error[hidden] { display:none !important; }
+.lf-modal {
+  position:fixed; inset:0; z-index:1000;
+  display:grid; place-items:center; padding:20px;
+}
+.lf-modal-backdrop {
+  position:absolute; inset:0;
+  background:rgba(10,31,42,.65);
+  backdrop-filter:blur(5px);
+}
+.lf-modal-card {
+  position:relative; z-index:1; width:100%; max-width:540px;
+  max-height:calc(100vh - 40px); overflow:auto;
+  background:#fff; border-radius:20px;
+  box-shadow:0 24px 90px rgba(0,0,0,.22);
+}
+.lf-modal-header {
+  display:flex; justify-content:space-between; gap:20px;
+  padding:27px 28px 20px; border-bottom:1px solid #edf2f4;
+}
+.lf-modal-header h2 {
+  margin:6px 0 8px; font-size:22px; color:#163d4b;
+}
+.lf-modal-header p {
+  margin:0; font-size:12px; line-height:1.6; color:#7a909a;
+}
+.lf-eyebrow {
+  font-size:10px; font-weight:800; letter-spacing:1.3px;
+  color:#168078;
+}
+.lf-close {
+  width:32px; height:32px; flex-shrink:0; border:0;
+  background:#f1f5f7; border-radius:9px; font-size:23px;
+  color:#607b88;
+}
+.lf-modal-body { padding:23px 28px; }
+.lf-form-field { margin-bottom:19px; }
+.lf-form-field label {
+  display:block; margin-bottom:8px;
+  font-size:12px; font-weight:750; color:#284956;
+}
+.lf-form-field input, .lf-form-field textarea {
+  width:100%; border:1px solid #d9e5eb; border-radius:10px;
+  padding:12px 13px; font:inherit; font-size:13px;
+  color:#254454; background:#fbfdfd;
+}
+.lf-form-field input:focus, .lf-form-field textarea:focus {
+  outline:2px solid #a6e4db; border-color:#168078;
+}
+.lf-form-field small {
+  display:block; margin-top:7px; font-size:11px;
+  color:#8296a0; line-height:1.5;
+}
+.lf-form-error {
+  color:#a72d35; background:#fff0f0;
+  padding:12px; border-radius:9px; font-size:12px;
+}
+.lf-modal-footer {
+  display:flex; justify-content:flex-end; gap:10px;
+  padding:18px 28px; background:#f7fafb;
+  border-radius:0 0 20px 20px;
+}
+.lf-modal-footer button { min-width:110px; }
+@media(max-width:550px) {
+  .lf-modal { padding:10px; }
+  .lf-modal-card { max-height:calc(100vh - 20px); }
+  .lf-modal-header,.lf-modal-body { padding:19px; }
+  .lf-modal-footer { padding:15px 19px; }
+}
+</style>
+</head><body><main>
 <header class="top"><div class="brand"><span class="mark">LF</span>LeadFlow AI<small>Sales operations portfolio · Zahid Surani</small></div><span id="mode" class="status">Loading mode…</span></header>
 <section class="hero"><div><h1>Turn leads into conversations.</h1><p>Capture prospects, prioritize opportunities, draft personalized outreach, and track results. Every message requires human approval.</p></div><button id="export">↓ Export CSV</button></section>
 <div id="banner" class="banner" role="status"></div>
@@ -235,6 +308,58 @@
 })();
 </script>
 
+
+<div id="qualify-modal" class="lf-modal" hidden>
+  <div class="lf-modal-backdrop" data-close-qualify></div>
+  <section class="lf-modal-card" role="dialog" aria-modal="true"
+           aria-labelledby="qualify-title">
+    <div class="lf-modal-header">
+      <div>
+        <div class="lf-eyebrow">PROSPECT QUALIFICATION</div>
+        <h2 id="qualify-title">Create a qualified lead</h2>
+        <p>Review the business and identify a potential sales opportunity.</p>
+      </div>
+      <button type="button" class="lf-close"
+              id="qualify-close" aria-label="Close">×</button>
+    </div>
+
+    <form id="qualify-form">
+      <div class="lf-modal-body">
+        <div class="lf-form-field">
+          <label for="qualify-company">Business name *</label>
+          <input id="qualify-company" required maxlength="150"
+                 placeholder="Business name">
+        </div>
+
+        <div class="lf-form-field">
+          <label for="qualify-contact">Contact name or research label *</label>
+          <input id="qualify-contact" required maxlength="120"
+                 placeholder="e.g. Store manager (unverified)">
+          <small>Use a research label if you haven't identified a contact.</small>
+        </div>
+
+        <div class="lf-form-field">
+          <label for="qualify-need">Potential sales opportunity *</label>
+          <textarea id="qualify-need" required maxlength="2000"
+                    rows="4"
+                    placeholder="e.g. Explore whether the business could benefit from a structured customer follow-up process."></textarea>
+          <small>Describe an opportunity to investigate, not an unverified customer claim.</small>
+        </div>
+
+        <p id="qualify-error" class="lf-form-error"
+           role="alert" hidden></p>
+      </div>
+
+      <div class="lf-modal-footer">
+        <button type="button" class="secondary"
+                id="qualify-cancel">Cancel</button>
+        <button type="submit" class="primary"
+                id="qualify-submit">Qualify lead</button>
+      </div>
+    </form>
+  </section>
+</div>
+
 </main>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -245,67 +370,130 @@ function message(s,bad=false){const b=$('banner');b.className='banner '+(bad?'ba
 
 
 
-async function qualifyDiscoveredBusiness(prospect, place) {
-  const contact = prompt(
-    'Contact person name (or your own research label):'
-  );
-  if (contact === null) return;
-  if (!contact.trim()) {
-    alert('Please enter a contact name or research label.');
-    return;
-  }
 
-  const suggestedCompany = place.displayName?.text || '';
-  const company = prompt(
-    'Verified business name:',
-    suggestedCompany
-  );
-  if (company === null) return;
-  if (!company.trim()) {
-    alert('Business name is required.');
-    return;
-  }
+let pendingQualification = null;
+let qualificationPreviousFocus = null;
 
-  const need = prompt(
-    'What sales opportunity have you identified?'
-  );
-  if (need === null) return;
-  if (!need.trim()) {
-    alert('Please describe the opportunity.');
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/places/qualify', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        place_id: prospect.place_id,
-        name: contact.trim(),
-        company: company.trim(),
-        need: need.trim(),
-        industry: '',
-        role: '',
-        email: '',
-        budget: '',
-        timeline: ''
-      })
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Qualification failed');
-    }
-
-    alert('Lead qualified and added to your sales pipeline!');
-
-    await refresh();
-
-  } catch (error) {
-    alert('Could not qualify business: ' + error.message);
+function closeQualificationModal() {
+  document.getElementById('qualify-modal').hidden = true;
+  document.body.style.overflow = '';
+  pendingQualification = null;
+  if (qualificationPreviousFocus &&
+      typeof qualificationPreviousFocus.focus === 'function') {
+    qualificationPreviousFocus.focus();
   }
 }
+
+function qualifyDiscoveredBusiness(prospect, place) {
+  pendingQualification = {prospect, place};
+  qualificationPreviousFocus = document.activeElement;
+
+  const form = document.getElementById('qualify-form');
+  form.reset();
+
+  document.getElementById('qualify-company').value =
+    place.displayName?.text || '';
+
+  document.getElementById('qualify-error').hidden = true;
+  document.getElementById('qualify-modal').hidden = false;
+  document.body.style.overflow = 'hidden';
+  document.getElementById('qualify-contact').focus();
+}
+
+document.getElementById('qualify-close').addEventListener(
+  'click', closeQualificationModal
+);
+document.getElementById('qualify-cancel').addEventListener(
+  'click', closeQualificationModal
+);
+document.querySelector('[data-close-qualify]').addEventListener(
+  'click', closeQualificationModal
+);
+
+document.addEventListener('keydown', function(event) {
+  const modal = document.getElementById('qualify-modal');
+  if (modal.hidden) return;
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeQualificationModal();
+  }
+
+  if (event.key === 'Tab') {
+    const controls = Array.from(modal.querySelectorAll(
+      'button:not(:disabled),input:not(:disabled),textarea:not(:disabled)'
+    )).filter(el => el.getClientRects().length);
+
+    if (!controls.length) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+});
+
+document.getElementById('qualify-form').addEventListener(
+  'submit', async function(event) {
+    event.preventDefault();
+    if (!pendingQualification) return;
+
+    const {prospect} = pendingQualification;
+    const company = document.getElementById('qualify-company').value.trim();
+    const contact = document.getElementById('qualify-contact').value.trim();
+    const need = document.getElementById('qualify-need').value.trim();
+    const errorBox = document.getElementById('qualify-error');
+    const submit = document.getElementById('qualify-submit');
+
+    if (!company || !contact || !need) {
+      errorBox.textContent = 'Please complete all required fields.';
+      errorBox.hidden = false;
+      return;
+    }
+
+    submit.disabled = true;
+    submit.textContent = 'Creating lead...';
+    errorBox.hidden = true;
+
+    try {
+      const response = await fetch('/api/places/qualify', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          place_id: prospect.place_id,
+          name: contact,
+          company: company,
+          need: need,
+          industry: '',
+          role: '',
+          email: '',
+          budget: '',
+          timeline: ''
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Qualification failed');
+      }
+
+      closeQualificationModal();
+      await refresh();
+      message('Lead qualified and added to your sales pipeline.');
+    } catch (error) {
+      errorBox.textContent = 'Could not qualify lead: ' + error.message;
+      errorBox.hidden = false;
+    } finally {
+      submit.disabled = false;
+      submit.textContent = 'Qualify lead';
+    }
+  }
+);
 
 async function loadSavedProspects() {
   const container = document.getElementById('saved-prospects');
