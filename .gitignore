@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+data/
+backups/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local backups and temporary files
+*.backup
+*.bak
+*.log

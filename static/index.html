@@ -1,0 +1,615 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LeadFlow AI · Sales Automation</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Arial,sans-serif;color:#1b3442;background:#f4f8fa}*{box-sizing:border-box}body{margin:0}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5}main{max-width:1300px;margin:auto;padding:25px}.top,.hero,.row,.panelhead,.lead,.rating{display:flex;justify-content:space-between;align-items:center;gap:14px}.brand{font-weight:850;font-size:23px;letter-spacing:-.6px}.brand small{display:block;font-size:12px;color:#7a909a;font-weight:500;letter-spacing:0;margin-top:4px}.mark{display:inline-grid;place-items:center;background:#124d5a;color:#b8f8e9;width:43px;height:43px;border-radius:13px;margin-right:10px}.status{font-size:12px;background:white;border:1px solid #e0e9ee;padding:10px 14px;border-radius:100px;color:#4e6b76}.hero{margin:23px 0;background:linear-gradient(110deg,#0c3949,#12636a);color:white;border-radius:18px;padding:26px 30px}.hero h1{font-size:24px;letter-spacing:-.5px;margin:0 0 8px}.hero p{font-size:13px;line-height:1.5;color:#d1e7e8;max-width:640px;margin:0}.hero button{background:#fff;color:#14505d;border:0;border-radius:9px;padding:11px 15px;font-size:12px;font-weight:800;white-space:nowrap}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px}.stat,.panel{background:white;border:1px solid #e2ebf0;border-radius:15px;box-shadow:0 3px 15px #24445708}.stat{padding:18px}.stat b{font-size:29px}.stat div{font-size:12px;color:#8395a1;margin-top:4px}.layout{display:grid;grid-template-columns:1fr 1.05fr;gap:17px;align-items:start}.panel{overflow:hidden}.panelhead{padding:20px}.panelhead h2{font-size:16px;margin:0}.panelhead p{font-size:12px;color:#80939e;margin:5px 0 0}.primary,.secondary{border-radius:9px;padding:10px 13px;font-size:12px;font-weight:750}.primary{background:#115e6b;border:1px solid #115e6b;color:white}.secondary{background:white;border:1px solid #d6e3e9;color:#285461}.filters{display:flex;gap:8px;padding:0 20px 15px}.filters input,.filters select,.field input,.field textarea,.field select{border:1px solid #d9e5eb;border-radius:9px;padding:10px;color:#254454;background:white;font-size:12px;min-width:0}.filters input{flex:1}.filters select{width:120px}.list{border-top:1px solid #eff3f5;max-height:680px;overflow:auto}.lead{padding:17px 20px;border-bottom:1px solid #edf2f4;cursor:pointer;align-items:start}.lead:hover,.lead.active{background:#eef8f8}.lead.active{border-left:4px solid #1b7a82;padding-left:16px}.lead b{font-size:13px}.lead p{font-size:12px;color:#6b818c;margin:5px 0}.lead small{font-size:11px;color:#8a9aa4;display:block;max-width:350px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.score{text-align:right;font-weight:800;font-size:19px}.pill{display:inline-block;background:#edf2f4;border-radius:100px;padding:5px 9px;font-size:10px;font-weight:800;color:#70818b;margin-top:4px}.pill.Hot{background:#e6f7ec;color:#207e4b}.pill.Warm{background:#fff2dc;color:#96650b}.pill.Cold{background:#eaf0fa;color:#486da8}.workspace{padding:0 20px 22px}.details{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 17px}.details div{padding:11px;background:#f5f9fa;border-radius:9px}.details .wide{grid-column:1/-1}.details label,.field label{display:block;font-size:10px;color:#7c909b;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}.details strong{font-size:12px;overflow-wrap:anywhere}.analysis{background:#eef8f8;border:1px solid #d8ebec;border-radius:12px;padding:14px;margin-top:15px}.analysis p{font-size:12px;line-height:1.55;color:#4b6872}.analysis .next{font-weight:750;color:#195962}.field{margin:12px 0}.field input,.field textarea,.field select{width:100%}.field textarea{min-height:100px;resize:vertical;line-height:1.5}.field label{text-transform:none;font-size:11px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.full{grid-column:1/-1}.empty{padding:40px 20px;text-align:center;color:#8095a0;font-size:13px;line-height:1.7}.note{font-size:11px;color:#8497a2;line-height:1.5}.banner{display:none;padding:11px 15px;border-radius:9px;margin-bottom:17px;font-size:12px}.banner.good{display:block;background:#e9f7ee;color:#266743}.banner.bad{display:block;background:#ffeded;color:#913e37}.footer{text-align:center;color:#91a1aa;font-size:11px;margin:25px 0}@media(max-width:900px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:550px){main{padding:14px}.hero{display:block;padding:20px}.hero button{margin-top:15px}.formgrid{grid-template-columns:1fr}.top{align-items:start}.status{max-width:150px}}
+
+<style>
+.stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.stat {
+  transition: transform .2s, box-shadow .2s;
+}
+.stat:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px #24445712;
+}
+#saved-prospects .lead {
+  background: #fff;
+  border: 1px solid #e2ebf0;
+  border-radius: 12px;
+  margin: 10px 14px;
+  cursor: default;
+}
+#saved-prospects .lead strong {
+  color: #124d5a;
+  font-size: 14px;
+}
+#saved-prospects .lead a {
+  color: #12636a;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 10px;
+}
+@media(max-width:1050px) {
+  .stats {grid-template-columns: repeat(3, minmax(0, 1fr));}
+}
+@media(max-width:550px) {
+  .stats {grid-template-columns: repeat(2, minmax(0, 1fr));}
+}
+</style></head><body><main>
+<header class="top"><div class="brand"><span class="mark">LF</span>LeadFlow AI<small>Sales operations portfolio · Zahid Surani</small></div><span id="mode" class="status">Loading mode…</span></header>
+<section class="hero"><div><h1>Turn leads into conversations.</h1><p>Capture prospects, prioritize opportunities, draft personalized outreach, and track results. Every message requires human approval.</p></div><button id="export">↓ Export CSV</button></section>
+<div id="banner" class="banner" role="status"></div>
+<section class="stats"><div class="stat"><b id="total">0</b><div>Total leads</div></div><div class="stat"><b id="discovered-count">0</b><div>Discovered businesses</div></div><div class="stat"><b id="hot">0</b><div>High priority</div></div><div class="stat"><b id="approved">0</b><div>Approved drafts</div></div><div class="stat"><b id="meetings">0</b><div>Meetings booked</div></div></section>
+<div class="layout"><section class="panel"><div class="panelhead"><div><h2>Sales pipeline</h2><p>Choose a lead to work on</p></div><button class="primary" id="new">+ Add lead</button></div><div class="filters"><input id="search" placeholder="Search names, companies, needs"><select id="filter"><option>All</option><option>Hot</option><option>Warm</option><option>Cold</option><option>Unscored</option></select></div><div id="leads" class="list"></div>
+<div style="margin-top:24px;border-top:1px solid #ddd;padding-top:16px">
+  <h3>Discovered Businesses</h3>
+  <p class="note">Businesses saved from Google Places</p>
+  <div id="saved-prospects" class="list">Loading...</div>
+</div>
+</section>
+<section class="panel"><div class="panelhead"><div><h2 id="title">Lead workspace</h2><p id="subtitle">Prioritize and follow up</p></div></div><div id="detail" class="workspace"></div></section></div>
+<p class="footer">Local-first prototype · Fictional sample leads · No automatic emailing · Suggestions require human review</p>
+<!-- LEADFLOW_BUSINESS_FINDER_V1 -->
+<section id="business-finder" class="panel"
+         style="display:none;margin-top:20px;padding:24px">
+
+  <h2>Find Businesses</h2>
+  <p class="note">
+    Discover independent businesses to add to your sales pipeline.
+  </p>
+
+  <div class="formgrid">
+
+    <div class="field">
+      <label>Location</label>
+      <input id="finder-location" value="Vancouver, BC">
+    </div>
+
+    <div class="field">
+      <label>Industry</label>
+      <select id="finder-industry">
+        <option value="jewelry stores">Jewelry</option>
+        <option value="antique stores">Antiques</option>
+        <option value="watch stores">Watches</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Maximum results</label>
+      <select id="finder-limit">
+        <option value="10">10 businesses</option>
+        <option value="5">5 businesses</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Business type</label>
+      <select id="finder-type">
+        <option>Independent small businesses</option>
+      </select>
+    </div>
+
+  </div>
+
+  <div class="row">
+    <button id="finder-search" class="primary">
+      Find Businesses
+    </button>
+    <button id="finder-close" class="secondary">
+      Close
+    </button>
+  </div>
+
+  <p id="finder-results" class="note"
+     style="margin-top:18px"></p>
+
+</section>
+
+<script>
+(function () {
+  const finder = document.getElementById('business-finder');
+
+  const newButton = document.getElementById('new');
+
+  if (!finder || !newButton) return;
+
+  const openButton = document.createElement('button');
+
+  openButton.id = 'open-business-finder';
+  openButton.className = 'secondary';
+  openButton.textContent = 'Find Businesses';
+
+  newButton.parentElement.insertBefore(
+    openButton,
+    newButton
+  );
+
+  openButton.onclick = function () {
+    finder.style.display = 'block';
+    finder.scrollIntoView({behavior:'smooth'});
+  };
+
+  document.getElementById('finder-close').onclick =
+    function () {
+      finder.style.display = 'none';
+    };
+
+  document.getElementById('finder-search').onclick =
+    async function () {
+      const location = document.getElementById('finder-location').value.trim();
+      const industry = document.getElementById('finder-industry').value;
+      const limit = Number(document.getElementById('finder-limit').value);
+      const results = document.getElementById('finder-results');
+
+      if (!location) {
+        results.textContent = 'Please enter a location.';
+        return;
+      }
+
+      const query = industry + ' in ' + location;
+
+      if (!confirm('Search Google Places for ' + query +
+          '? This may incur Google API charges.')) return;
+
+      results.textContent = 'Searching...';
+
+      try {
+        const response = await fetch('/api/places/search', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({query: query})
+        });
+
+        const data = await response.json();
+
+        if (!response.ok)
+          throw new Error(data.error || 'Search failed.');
+
+        const places = (data.places || []).slice(0, limit);
+        results.replaceChildren();
+
+        if (!places.length) {
+          results.textContent = 'No businesses found.';
+          return;
+        }
+
+        places.forEach(place => {
+          const item = document.createElement('div');
+          item.style.cssText =
+            'padding:12px;border-bottom:1px solid #ddd;margin-bottom:8px';
+
+          const name = document.createElement('strong');
+          name.textContent =
+            place.displayName?.text || 'Unnamed business';
+
+          const details = document.createElement('p');
+          details.textContent =
+            (place.formattedAddress || 'Address unavailable') +
+            ' — ' +
+            (place.nationalPhoneNumber || 'No phone listed');
+
+          const button = document.createElement('button');
+          button.textContent = 'Save to CRM';
+          button.className = 'primary';
+
+          button.onclick = async () => {
+            button.disabled = true;
+            button.textContent = 'Saving...';
+
+            try {
+              const response = await fetch('/api/places/import', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({place_id: place.id})
+              });
+
+              const data = await response.json();
+
+              if (response.status === 409 && data.duplicate) {
+                button.textContent = 'Already saved';
+                return;
+              }
+
+              if (!response.ok) {
+                throw new Error(data.error || 'Import failed');
+              }
+
+              button.textContent = 'Saved ✓';
+
+            } catch (error) {
+              button.disabled = false;
+              button.textContent = 'Save to CRM';
+              alert(error.message);
+            }
+          };
+
+          item.append(name, details, button);
+          results.appendChild(item);
+        });
+
+      } catch (error) {
+        results.textContent = 'Search error: ' + error.message;
+      }
+    };
+})();
+</script>
+
+</main>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let leads=[],selected=null,adding=false;
+const stages=['New','Contacted','Meeting booked','Qualified','Closed won','Closed lost'];
+async function api(path,method='GET',payload){const options={method,headers:{}};if(payload!==undefined){options.headers['Content-Type']='application/json';options.body=JSON.stringify(payload);}const r=await fetch(path,options),data=await r.json();if(!r.ok)throw Error(data.error||'Request failed');return data;}
+function message(s,bad=false){const b=$('banner');b.className='banner '+(bad?'bad':'good');b.textContent=s;}
+
+
+
+async function qualifyDiscoveredBusiness(prospect, place) {
+  const contact = prompt(
+    'Contact person name (or your own research label):'
+  );
+  if (contact === null) return;
+  if (!contact.trim()) {
+    alert('Please enter a contact name or research label.');
+    return;
+  }
+
+  const suggestedCompany = place.displayName?.text || '';
+  const company = prompt(
+    'Verified business name:',
+    suggestedCompany
+  );
+  if (company === null) return;
+  if (!company.trim()) {
+    alert('Business name is required.');
+    return;
+  }
+
+  const need = prompt(
+    'What sales opportunity have you identified?'
+  );
+  if (need === null) return;
+  if (!need.trim()) {
+    alert('Please describe the opportunity.');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/places/qualify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        place_id: prospect.place_id,
+        name: contact.trim(),
+        company: company.trim(),
+        need: need.trim(),
+        industry: '',
+        role: '',
+        email: '',
+        budget: '',
+        timeline: ''
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Qualification failed');
+    }
+
+    alert('Lead qualified and added to your sales pipeline!');
+
+    await refresh();
+
+  } catch (error) {
+    alert('Could not qualify business: ' + error.message);
+  }
+}
+
+async function loadSavedProspects() {
+  const container = document.getElementById('saved-prospects');
+  if (!container) return;
+
+  container.textContent = 'Loading saved businesses...';
+
+  try {
+    const response = await fetch('/api/places/saved');
+    if (!response.ok) throw new Error('Could not load prospects');
+
+    const data = await response.json();
+    const prospects = data.prospects || [];
+    const count = document.getElementById('discovered-count');
+    if (count) count.textContent = prospects.length;
+    container.replaceChildren();
+
+    if (!prospects.length) {
+      container.textContent = 'No businesses saved yet.';
+      return;
+    }
+
+    for (const prospect of prospects) {
+      const item = document.createElement('div');
+      item.className = 'lead';
+      item.style.cssText = 'display:block;padding:14px;margin-bottom:10px';
+
+      const name = document.createElement('strong');
+      name.textContent = 'Loading business...';
+
+      const address = document.createElement('p');
+      const phone = document.createElement('p');
+      const stage = document.createElement('small');
+      stage.textContent = 'Stage: ' + prospect.stage;
+
+      item.append(name, address, phone, stage);
+      container.appendChild(item);
+
+      try {
+        const url = '/api/places/details?place_id=' +
+          encodeURIComponent(prospect.place_id);
+
+        const detailsResponse = await fetch(url);
+        const details = await detailsResponse.json();
+
+        if (!detailsResponse.ok) {
+          throw new Error(details.error || 'Details unavailable');
+        }
+
+        const place = details.place;
+
+        name.textContent =
+          place.displayName?.text || 'Unnamed business';
+
+        address.textContent =
+          place.formattedAddress || 'No address listed';
+
+        phone.textContent =
+          place.nationalPhoneNumber || 'No phone listed';
+
+        if (prospect.lead_id != null) {
+          const qualified = document.createElement('p');
+          qualified.textContent =
+            'Qualified — CRM Lead #' + prospect.lead_id;
+          qualified.style.fontWeight = 'bold';
+          item.appendChild(qualified);
+        } else {
+          const qualifyButton = document.createElement('button');
+          qualifyButton.textContent = 'Qualify as Lead';
+          qualifyButton.style.marginTop = '10px';
+          qualifyButton.addEventListener('click', () => {
+            qualifyDiscoveredBusiness(prospect, place);
+          });
+          item.appendChild(qualifyButton);
+        }
+
+        if (place.websiteUri) {
+          const website = document.createElement('a');
+          website.href = place.websiteUri;
+          website.target = '_blank';
+          website.rel = 'noopener noreferrer';
+          website.textContent = 'Visit website';
+          website.style.display = 'block';
+          item.appendChild(website);
+        }
+
+      } catch (error) {
+        name.textContent = 'Business details unavailable';
+        address.textContent = error.message;
+      }
+    }
+
+    const attribution = document.createElement('p');
+    attribution.className = 'note';
+    attribution.textContent = 'Business information provided by Google Maps';
+    container.appendChild(attribution);
+
+  } catch (error) {
+    container.textContent = 'Error: ' + error.message;
+  }
+}
+
+async function refresh(){await loadSavedProspects();leads=(await api('/api/leads')).leads;if(!leads.some(l=>l.id===selected))selected=leads.length?leads[0].id:null;render();}
+function render(){
+ $('total').textContent=leads.length;$('hot').textContent=leads.filter(l=>l.priority==='Hot').length;$('approved').textContent=leads.filter(l=>l.approved).length;$('meetings').textContent=leads.filter(l=>l.stage==='Meeting booked').length;
+ const q=$('search').value.toLowerCase(),f=$('filter').value;
+ const visible=leads.filter(l=>[l.name,l.company,l.need].some(x=>x.toLowerCase().includes(q))&&(f==='All'||(f==='Unscored'?!l.priority:l.priority===f)));
+ $('leads').innerHTML=visible.length?visible.map(l=>`<div class="lead ${selected===l.id&&!adding?'active':''}" data-id="${l.id}" role="button" tabindex="0"><div><b>${esc(l.name)}</b><p>${esc(l.company)} · ${esc(l.stage)}</p><small>${esc(l.need)}</small></div><div class="score">${l.score??'—'}<div><span class="pill ${l.priority||''}">${l.priority||'Unscored'}</span></div></div></div>`).join(''):`<div class="empty">${leads.length?'No matching leads.':'Your pipeline is empty. Start with sample leads or add your own.'}</div>`;
+ document.querySelectorAll('[data-id]').forEach(el=>{const fn=()=>{selected=+el.dataset.id;adding=false;render();};el.onclick=fn;el.onkeydown=e=>{if(e.key==='Enter')fn();};});
+ if(adding){renderForm();return;}const l=leads.find(x=>x.id===selected);if(!l){$('title').textContent='Get started';$('subtitle').textContent='Explore the workflow';$('detail').innerHTML='<div class="empty">Start with three fictional businesses.<br><br><button id="samples" class="primary">Load 3 sample leads</button></div>';$('samples').onclick=async()=>{try{await api('/api/demo','POST');await refresh();message('Sample leads loaded. Select one and click Analyze.');}catch(e){message(e.message,true);}};return;}renderDetail(l);
+}
+function renderForm(){
+ $('title').textContent='Add a new lead';$('subtitle').textContent='Capture the opportunity';
+ $('detail').innerHTML=`<form id="leadform"><div class="formgrid">${[['name','Contact name *'],['company','Company *'],['email','Email'],['industry','Industry'],['role','Job title'],['budget','Budget'],['timeline','Buying timeline'],['source','Lead source']].map(([k,label])=>`<div class="field"><label>${label}</label><input name="${k}" ${k==='name'||k==='company'?'required':''} ${k==='email'?'type="email"':''}></div>`).join('')}<div class="field full"><label>Customer need or pain point *</label><textarea name="need" required placeholder="What problem are they trying to solve?"></textarea></div></div><div class="row"><button class="primary">Save lead</button><button type="button" id="cancel" class="secondary">Cancel</button></div><p class="note">Use fictional information for demonstrations.</p></form>`;
+ $('cancel').onclick=()=>{adding=false;render();};$('leadform').onsubmit=async e=>{e.preventDefault();try{const d=Object.fromEntries(new FormData(e.target).entries());const r=await api('/api/leads','POST',d);adding=false;await refresh();selected=r.lead.id;render();message('Lead created. You can now analyze it.');}catch(err){message(err.message,true);}};
+}
+function renderDetail(l){
+ $('title').textContent=l.company;$('subtitle').textContent=l.name+' · '+l.industry;
+ const info=[['Contact',l.name],['Job title',l.role],['Email',l.email],['Source',l.source],['Budget',l.budget],['Timeline',l.timeline],['Customer need',l.need]];
+ $('detail').innerHTML=`<div class="details">${info.map(([k,v],i)=>`<div class="${i===6?'wide':''}"><label>${k}</label><strong>${esc(v||'Not specified')}</strong></div>`).join('')}</div><div class="row"><button id="analyze" class="primary">✦ ${l.score===null?'Analyze lead':'Re-analyze'}</button><select id="stage" class="secondary" aria-label="Pipeline stage">${stages.map(s=>`<option ${s===l.stage?'selected':''}>${s}</option>`).join('')}</select></div>
+ ${l.score===null?'<p class="note">In free demo mode, scoring uses transparent rules, not AI.</p>':`<div class="analysis"><div class="rating"><b>Score ${l.score}/100</b><span class="pill ${l.priority}">${l.priority} priority</span></div><p>${esc(l.rationale)}</p><p class="next">Next action: ${esc(l.next_action)}</p><p class="note">Mode: ${esc(l.analysis_mode)}</p></div><h4>Follow-up draft ${l.approved?'✓ Approved':''}</h4><div class="field"><label>Subject</label><input id="subject" value="${esc(l.draft_subject)}"></div><div class="field"><label>Message</label><textarea id="body" style="min-height:200px">${esc(l.draft_body)}</textarea></div><div class="row"><button id="save" class="secondary">Save edits</button><button id="approve" class="primary">${l.approved?'Approved ✓':'Approve draft'}</button><button id="copy" class="secondary">Copy</button></div><p class="note">Approving does not send anything. Editing resets approval.</p>`}`;
+ $('analyze').onclick=async()=>{const b=$('analyze');b.disabled=true;b.textContent='Analyzing…';try{await api(`/api/leads/${l.id}/analyze`,'POST');await refresh();message('Analysis and draft created.');}catch(e){message(e.message,true);b.disabled=false;b.textContent='Try again';}};
+ $('stage').onchange=async e=>{try{await api(`/api/leads/${l.id}/stage`,'POST',{stage:e.target.value});await refresh();message('Stage updated.');}catch(err){message(err.message,true);}};
+ if(l.score!==null){
+ $('save').onclick=async()=>{try{await api(`/api/leads/${l.id}/draft`,'POST',{draft_subject:$('subject').value,draft_body:$('body').value});await refresh();message('Draft saved. Approval reset.');}catch(e){message(e.message,true);}};
+ $('approve').onclick=async()=>{if($('subject').value!==l.draft_subject||$('body').value!==l.draft_body){message('Save your edits before approving.',true);return;}try{await api(`/api/leads/${l.id}/approve`,'POST');await refresh();message('Draft approved. No email was sent.');}catch(e){message(e.message,true);}};
+ $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(`Subject: ${$('subject').value}\n\n${$('body').value}`);message('Draft copied. Nothing was sent.');}catch(e){message('Clipboard unavailable. Copy manually.',true);}};
+ }
+}
+$('new').onclick=()=>{adding=true;render();};$('search').oninput=render;$('filter').onchange=render;$('export').onclick=()=>location.href='/api/export.csv';
+(async()=>{try{const s=await api('/api/status');$('mode').textContent=s.ai_enabled?'● Real AI enabled · '+s.model:'● Free demo mode · no API key';await refresh();}catch(e){message('Server connection failed: '+e.message,true);}})();
+
+// LEADFLOW_EDIT_FEATURE_V1
+const originalRenderDetail = renderDetail;
+
+renderDetail = function(lead) {
+    originalRenderDetail(lead);
+
+    const button = document.createElement('button');
+    button.id = 'edit-lead';
+    button.className = 'secondary';
+    button.textContent = '✎ Edit Lead';
+
+    const analyze = document.getElementById('analyze');
+
+    if (analyze) {
+        analyze.parentElement.insertBefore(button, analyze);
+    }
+
+    button.onclick = () => showEditLead(lead);
+};
+
+function showEditLead(lead) {
+    $('title').textContent = 'Edit Lead';
+    $('subtitle').textContent = lead.name + ' · ' + lead.company;
+
+    const fields = [
+        ['name', 'Contact name *'],
+        ['company', 'Company *'],
+        ['email', 'Email'],
+        ['industry', 'Industry'],
+        ['role', 'Job title'],
+        ['budget', 'Budget'],
+        ['timeline', 'Buying timeline'],
+        ['source', 'Lead source']
+    ];
+
+    $('detail').innerHTML = `
+        <form id="edit-lead-form">
+            <div class="formgrid">
+                ${fields.map(([key, label]) => `
+                    <div class="field">
+                        <label for="edit-${key}">${label}</label>
+                        <input
+                            id="edit-${key}"
+                            name="${key}"
+                            ${key === 'email' ? 'type="email"' : ''}
+                            ${['name','company'].includes(key) ? 'required' : ''}
+                            value="${esc(lead[key])}"
+                        >
+                    </div>
+                `).join('')}
+
+                <div class="field full">
+                    <label for="edit-need">
+                        Customer need or pain point *
+                    </label>
+                    <textarea
+                        id="edit-need"
+                        name="need"
+                        required
+                    >${esc(lead.need)}</textarea>
+                </div>
+            </div>
+
+            <div class="row">
+                <button class="primary" type="submit">
+                    Save Changes
+                </button>
+
+                <button
+                    class="secondary"
+                    type="button"
+                    id="cancel-edit"
+                >
+                    Cancel
+                </button>
+            </div>
+
+            <p class="note">
+                Updating customer details clears the previous
+                analysis and draft. Analyze the lead again
+                after saving.
+            </p>
+        </form>
+    `;
+
+    $('cancel-edit').onclick = () => render();
+
+    $('edit-lead-form').onsubmit = async event => {
+        event.preventDefault();
+
+        const form = event.target;
+        const data = Object.fromEntries(
+            new FormData(form).entries()
+        );
+
+        const button = form.querySelector(
+            'button[type="submit"]'
+        );
+
+        button.disabled = true;
+
+        try {
+            await api(
+                `/api/leads/${lead.id}/edit`,
+                'POST',
+                data
+            );
+
+            await refresh();
+
+            message('Customer information updated successfully.');
+        } catch (error) {
+            button.disabled = false;
+            message(error.message, true);
+        }
+    };
+}
+
+
+// LEADFLOW_DELETE_BUTTON_V1
+const previousRenderDetailForDelete = renderDetail;
+
+renderDetail = function(lead) {
+    previousRenderDetailForDelete(lead);
+
+    const button = document.createElement('button');
+    button.id = 'delete-lead';
+    button.className = 'secondary';
+    button.textContent = 'Delete Lead';
+    button.style.color = '#b42318';
+    button.style.borderColor = '#f1b5b0';
+
+    const analyze = document.getElementById('analyze');
+
+    if (analyze) {
+        analyze.parentElement.appendChild(button);
+    }
+
+    button.onclick = async () => {
+        const confirmation = prompt(
+            `Delete ${lead.name} from ${lead.company}?\n\n` +
+            `Type the customer's exact name to confirm:`
+        );
+
+        if (confirmation === null) return;
+
+        if (confirmation !== lead.name) {
+            message('Name did not match. Nothing was deleted.', true);
+            return;
+        }
+
+        button.disabled = true;
+
+        try {
+            await api(
+                `/api/leads/${lead.id}/delete`,
+                'POST',
+                {confirm_name: confirmation}
+            );
+
+            selected = null;
+            await refresh();
+
+            message(
+                `${lead.name} was deleted from the pipeline. ` +
+                `A recovery copy was saved.`
+            );
+        } catch (error) {
+            button.disabled = false;
+            message(error.message, true);
+        }
+    };
+};
+
+</script></body></html>
