@@ -11,3 +11,6 @@ __pycache__/
 *.backup
 *.bak
 *.log
+
+# Local pre-deployment backups
+app.py.before_step*

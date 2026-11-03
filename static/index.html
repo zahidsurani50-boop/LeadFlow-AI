@@ -222,7 +222,14 @@
 
       const query = industry + ' in ' + location;
 
-      if (!confirm('Search Google Places for ' + query +
+      const statusResponse = await fetch('/api/status');
+      if (!statusResponse.ok) {
+        alert('Could not verify search mode.');
+        return;
+      }
+      const status = await statusResponse.json();
+      if (!status.public_demo &&
+          !confirm('Search Google Places for ' + query +
           '? This may incur Google API charges.')) return;
 
       results.textContent = 'Searching...';

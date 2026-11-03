@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """LeadFlow AI — local mini CRM; standard library only."""
 import csv, io, json, os, re, sqlite3, sys
+import secrets
+import threading
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -9,15 +12,31 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = Path(os.environ.get('LEADFLOW_DB', str(ROOT / 'data' / 'leadflow.db')))
+DB_PATH = (
+    ROOT / 'data' / 'public_demo.db'
+    if os.environ.get('PUBLIC_DEMO', '0') == '1'
+    else Path(os.environ.get('LEADFLOW_DB', str(ROOT / 'data' / 'leadflow.db')))
+)
 PORT = int(os.environ.get('LEADFLOW_PORT', '9000'))
+
+# Public portfolio demo configuration
+PUBLIC_DEMO = os.environ.get('PUBLIC_DEMO', '0') == '1'
+DEMO_DB_PATH = ROOT / 'data' / 'public_demo.db'
+
 MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4.1-mini')
 STAGES = {'New','Contacted','Meeting booked','Qualified','Closed won','Closed lost'}
 
 def now(): return datetime.now(timezone.utc).isoformat(timespec='seconds')
+# Database assigned to the current request.
+# None means use the normal configured database.
+REQUEST_DB = ContextVar('leadflow_request_db', default=None)
+
 def dbconnect(path=None):
-    p = Path(path or DB_PATH); p.parent.mkdir(parents=True,exist_ok=True)
-    db = sqlite3.connect(p,timeout=10); db.row_factory=sqlite3.Row
+    selected = path if path is not None else REQUEST_DB.get()
+    p = Path(selected if selected is not None else DB_PATH)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(p, timeout=10)
+    db.row_factory = sqlite3.Row
     return db
 
 def init_db(path=None):
@@ -29,6 +48,28 @@ def init_db(path=None):
             source TEXT NOT NULL DEFAULT '', stage TEXT NOT NULL DEFAULT 'New', score INTEGER,
             priority TEXT, rationale TEXT, next_action TEXT, draft_subject TEXT, draft_body TEXT,
             analysis_mode TEXT, approved INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT)''')
+
+# PUBLIC_DEMO_DATABASE_INITIALIZER
+def init_demo_database(path):
+    init_db(path)
+    with dbconnect(path) as db:
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS place_prospects (
+                place_id TEXT PRIMARY KEY,
+                stage TEXT NOT NULL DEFAULT 'New',
+                created_at TEXT NOT NULL,
+                lead_id INTEGER
+            )
+        ''')
+        columns = [
+            row['name']
+            for row in db.execute('PRAGMA table_info(place_prospects)')
+        ]
+        if 'lead_id' not in columns:
+            db.execute(
+                'ALTER TABLE place_prospects ADD COLUMN lead_id INTEGER'
+            )
+
 
 def list_leads(path=None):
     with dbconnect(path) as db: return [dict(x) for x in db.execute('SELECT * FROM leads ORDER BY id DESC')]
@@ -124,6 +165,10 @@ def find_google_places(query, limit=10):
             "Could not connect to Google Places."
         ) from e
 def ai_analysis(lead):
+    # PUBLIC_DEMO_SCORING_GUARD
+    if PUBLIC_DEMO:
+        return demo_analysis(lead)
+
     mode = os.environ.get('AI_MODE', 'demo').strip().lower()
     if mode != 'openai': return demo_analysis(lead)
     key = os.environ.get('OPENAI_API_KEY', '').strip()
@@ -260,10 +305,265 @@ def delete_customer(lead_id, confirmation):
             raise ValueError("Deletion failed.")
 
 
+# PUBLIC_DEMO_SESSION_HELPERS
+import hashlib
+import hmac
+
+# PUBLIC_DEMO_SIGNED_SESSIONS
+SESSION_SECRET = os.environ.get('DEMO_SESSION_SECRET', '')
+
+def sign_demo_session(session_id):
+    if not SESSION_SECRET:
+        raise RuntimeError('Demo session secret is not configured.')
+    signature = hmac.new(
+        SESSION_SECRET.encode('utf-8'),
+        session_id.encode('ascii'),
+        hashlib.sha256
+    ).hexdigest()
+    return session_id + '.' + signature
+
+def verify_demo_session(value):
+    if not SESSION_SECRET or not value:
+        return None
+
+    parts = value.split('.')
+    if len(parts) != 2:
+        return None
+
+    session_id, signature = parts
+    if not valid_demo_session_id(session_id):
+        return None
+
+    expected = hmac.new(
+        SESSION_SECRET.encode('utf-8'),
+        session_id.encode('ascii'),
+        hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(signature, expected):
+        return None
+
+    return session_id
+
+
+from http.cookies import SimpleCookie
+
+SESSION_COOKIE = 'leadflow_demo_session'
+SESSION_DIR = ROOT / 'data' / 'demo_sessions'
+
+def new_demo_session_id():
+    return secrets.token_hex(24)
+
+def valid_demo_session_id(value):
+    return bool(re.fullmatch(r'[0-9a-f]{48}', value or ''))
+
+def demo_session_path(session_id):
+    if not valid_demo_session_id(session_id):
+        raise ValueError('Invalid demo session.')
+    return SESSION_DIR / (session_id + '.db')
+
+
+# PUBLIC_DEMO_SESSION_SETUP
+# PUBLIC_DEMO_SESSION_EXPIRY
+import time
+
+SESSION_TTL = 3600
+SESSION_CLEANUP_INTERVAL = 300
+MAX_DEMO_SESSIONS = 100
+MAX_DEMO_DB_BYTES = 5 * 1024 * 1024
+_session_lock = threading.Lock()
+_last_session_cleanup = 0.0
+
+def prepare_demo_session(cookie_header, client_key='local'):
+    global _last_session_cleanup
+
+    cookie = SimpleCookie()
+    try:
+        cookie.load(cookie_header or '')
+    except Exception:
+        cookie = SimpleCookie()
+
+    existing = cookie.get(SESSION_COOKIE)
+    session_id = (
+        verify_demo_session(existing.value)
+        if existing else None
+    ) or ''
+
+    with _session_lock:
+        current_time = time.time()
+        SESSION_DIR.mkdir(parents=True, exist_ok=True)
+
+        if current_time - _last_session_cleanup >= SESSION_CLEANUP_INTERVAL:
+            for old_file in SESSION_DIR.glob('*.db'):
+                try:
+                    if current_time - old_file.stat().st_mtime > SESSION_TTL:
+                        old_file.unlink()
+                except OSError:
+                    pass
+            _last_session_cleanup = current_time
+
+        if valid_demo_session_id(session_id):
+            path = demo_session_path(session_id)
+            try:
+                active = (
+                    path.is_file()
+                    and current_time - path.stat().st_mtime < SESSION_TTL
+                )
+            except OSError:
+                active = False
+        else:
+            active = False
+
+        if not active:
+            active_count = sum(
+                1 for file in SESSION_DIR.glob('*.db')
+                if current_time - file.stat().st_mtime < SESSION_TTL
+            )
+            if active_count >= MAX_DEMO_SESSIONS:
+                raise RuntimeError(
+                    'Demo is temporarily at capacity. Please try again later.'
+                )
+            # PUBLIC_DEMO_PRE_CREATION_LIMIT
+            if not demo_new_session_allowed(client_key):
+                raise PermissionError(
+                    'Too many new demo sessions. Please try again later.'
+                )
+            session_id = new_demo_session_id()
+
+        path = demo_session_path(session_id)
+        init_demo_database(path)
+        path.touch()
+
+    return session_id, path
+
+
+# PUBLIC_DEMO_RATE_LIMITER
+from collections import deque
+
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX = 120
+_rate_lock = threading.Lock()
+_rate_requests = {}
+
+def demo_rate_allowed(session_id):
+    current = time.monotonic()
+
+    with _rate_lock:
+        # PUBLIC_DEMO_RATE_CLEANUP
+        if len(_rate_requests) > 500:
+            for key, entries in list(_rate_requests.items()):
+                if not entries or current - entries[-1] >= RATE_LIMIT_WINDOW:
+                    del _rate_requests[key]
+
+        history = _rate_requests.setdefault(session_id, deque())
+
+        while history and current - history[0] >= RATE_LIMIT_WINDOW:
+            history.popleft()
+
+        if len(history) >= RATE_LIMIT_MAX:
+            return False
+
+        history.append(current)
+        return True
+
+
+# PUBLIC_DEMO_NEW_SESSION_LIMIT
+NEW_SESSION_WINDOW = 60
+NEW_SESSION_MAX = 10
+_new_session_requests = {}
+_new_session_lock = threading.Lock()
+
+def demo_new_session_allowed(client_key):
+    current = time.monotonic()
+
+    with _new_session_lock:
+        # PUBLIC_DEMO_NEW_SESSION_CLEANUP
+        if len(_new_session_requests) > 500:
+            for key, entries in list(_new_session_requests.items()):
+                if not entries or current - entries[-1] >= NEW_SESSION_WINDOW:
+                    del _new_session_requests[key]
+
+        history = _new_session_requests.setdefault(
+            client_key, deque()
+        )
+
+        while history and current - history[0] >= NEW_SESSION_WINDOW:
+            history.popleft()
+
+        if len(history) >= NEW_SESSION_MAX:
+            return False
+
+        history.append(current)
+        return True
+
+
 class Handler(BaseHTTPRequestHandler):
+    # PUBLIC_DEMO_REQUEST_SESSIONS
+    def handle_one_request(self):
+        self._demo_session_id = None
+        self._demo_new_session = False
+        super().handle_one_request()
+
+    def _prepare_request_session(self):
+        if not PUBLIC_DEMO:
+            return True
+
+        try:
+            session_id, path = prepare_demo_session(
+                self.headers.get('Cookie', ''),
+                self.client_address[0]
+            )
+        except PermissionError:
+            self.send_json({
+                'error': 'Too many new demo sessions. Please try again later.'
+            }, 429)
+            return False
+        except RuntimeError:
+            self.send_json({
+                'error': 'Demo is temporarily at capacity. Please try again later.'
+            }, 503)
+            return False
+
+        self._demo_session_id = session_id
+        self._demo_new_session = True
+        REQUEST_DB.set(path)
+
+        # PUBLIC_DEMO_RATE_GUARD
+        if not demo_rate_allowed(session_id):
+            self.send_json({
+                'error': 'Too many requests. Please wait a minute.'
+            }, 429)
+            return False
+
+        return True
+
+    def do_HEAD(self):
+        self.send_response(405)
+        self.end_headers()
+
+
+    # PUBLIC_DEMO_COOKIE
+    def _send_demo_cookie(self):
+        if not PUBLIC_DEMO:
+            return
+        session_id = getattr(self, '_demo_session_id', None)
+        if not session_id:
+            return
+        cookie = SimpleCookie()
+        cookie[SESSION_COOKIE] = sign_demo_session(session_id)
+        cookie[SESSION_COOKIE]['path'] = '/'
+        cookie[SESSION_COOKIE]['httponly'] = True
+        cookie[SESSION_COOKIE]['samesite'] = 'Lax'
+        cookie[SESSION_COOKIE]['max-age'] = 3600
+        if os.environ.get('DEMO_HTTPS', '0') == '1':
+            cookie[SESSION_COOKIE]['secure'] = True
+        self.send_header('Set-Cookie', cookie.output(header='').strip())
+
     def send_json(self,data,status=200):
         b=json.dumps(data,ensure_ascii=False).encode()
-        self.send_response(status);self.send_header('Content-Type','application/json; charset=utf-8')
+        self.send_response(status)
+        self._send_demo_cookie()
+        self.send_header('Content-Type','application/json; charset=utf-8')
         self.send_header('Content-Length',str(len(b)));self.send_header('Cache-Control','no-store')
         self.end_headers();self.wfile.write(b)
     def body(self):
@@ -274,12 +574,40 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(x,dict): raise ValueError('Expected an object.')
         return x
     def do_GET(self):
+        if not self._prepare_request_session():
+            return
+        # PUBLIC_DEMO_API_GUARD
+        if PUBLIC_DEMO and self.path.startswith('/api/places/details?'):
+            # PUBLIC_DEMO_SAMPLE_DETAILS
+            place_id = parse_qs(urlparse(self.path).query).get('place_id', [''])[0]
+            samples = {
+                'demo-northstar': 'Northstar Coffee Co.',
+                'demo-pacific': 'Pacific Peak Fitness',
+                'demo-harbour': 'Harbourline Retail',
+                'demo-evergreen': 'Evergreen Property Group'
+            }
+            if place_id not in samples:
+                self.send_json({'error': 'Sample business not found.'}, 404)
+                return
+            self.send_json({'place': {
+                'id': place_id,
+                'displayName': {'text': samples[place_id]},
+                'formattedAddress': 'Fictional business, Vancouver, BC',
+                'nationalPhoneNumber': '',
+                'websiteUri': ''
+            }})
+            return
+
         if self.path in ('/','/index.html'):
             b=(ROOT/'static'/'index.html').read_bytes()
-            self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8')
-            self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)
+            self.send_response(200)
+            self._send_demo_cookie()
+            self.send_header('Content-Type','text/html; charset=utf-8')
+            self.send_header('Content-Length',str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
         elif self.path=='/api/status':
-            self.send_json({'ai_enabled':os.environ.get('AI_MODE','demo').strip().lower()=='openai' and bool(os.environ.get('OPENAI_API_KEY','').strip()),'model':MODEL})
+            self.send_json({'ai_enabled':os.environ.get('AI_MODE','demo').strip().lower()=='openai' and bool(os.environ.get('OPENAI_API_KEY','').strip()),'model':MODEL,'public_demo':PUBLIC_DEMO})
         elif self.path.startswith('/api/places/details?'):
             params = parse_qs(urlparse(self.path).query)
             place_id = params.get('place_id', [''])[0]
@@ -353,6 +681,74 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)
         else: self.send_json({'error':'Not found.'},404)
     def do_POST(self):
+        # PUBLIC_DEMO_ORIGIN_GUARD
+        if PUBLIC_DEMO:
+            origin = self.headers.get('Origin', '')
+            host = self.headers.get('Host', '')
+
+            if not host or not re.fullmatch(
+                r'[A-Za-z0-9.\-:\[\]]+', host
+            ):
+                self.send_json({'error': 'Invalid request host.'}, 403)
+                return
+
+            if origin:
+                parsed = urlparse(origin)
+                if (
+                    parsed.scheme not in ('http', 'https')
+                    or parsed.netloc.lower() != host.lower()
+                    or parsed.path not in ('', '/')
+                ):
+                    self.send_json({
+                        'error': 'Cross-site requests are not allowed.'
+                    }, 403)
+                    return
+
+        if not self._prepare_request_session():
+            return
+
+        # PUBLIC_DEMO_DATABASE_SIZE_GUARD
+        if PUBLIC_DEMO:
+            path = REQUEST_DB.get()
+            if path is not None:
+                try:
+                    db_size = Path(path).stat().st_size
+                    wal_path = Path(str(path) + '-wal')
+                    if wal_path.exists():
+                        db_size += wal_path.stat().st_size
+                    if db_size >= MAX_DEMO_DB_BYTES:
+                        self.send_json({
+                            'error': 'Demo storage limit reached. Start a new session later.'
+                        }, 507)
+                        return
+                except OSError:
+                    self.send_json({
+                        'error': 'Unable to check demo storage.'
+                    }, 503)
+                    return
+        # PUBLIC_DEMO_API_GUARD
+        if PUBLIC_DEMO and self.path == '/api/places/search':
+            # PUBLIC_DEMO_SAMPLE_SEARCH
+            self.body()
+            samples = [
+                ('demo-northstar', 'Northstar Coffee Co.'),
+                ('demo-pacific', 'Pacific Peak Fitness'),
+                ('demo-harbour', 'Harbourline Retail'),
+                ('demo-evergreen', 'Evergreen Property Group')
+            ]
+            places = [
+                {
+                    'id': pid,
+                    'displayName': {'text': name},
+                    'formattedAddress': 'Fictional business, Vancouver, BC',
+                    'nationalPhoneNumber': '',
+                    'websiteUri': ''
+                }
+                for pid, name in samples
+            ]
+            self.send_json({'places': places})
+            return
+
         try:
     
             if self.path == '/api/places/import':
@@ -531,6 +927,25 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__=='__main__':
     init_db()
+
+    # AUTO_MIGRATE_PROSPECT_LEAD_ID
+    with dbconnect() as db:
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS place_prospects (
+                place_id TEXT PRIMARY KEY,
+                stage TEXT NOT NULL DEFAULT 'New',
+                created_at TEXT NOT NULL,
+                lead_id INTEGER
+            )
+        ''')
+        columns = [
+            row['name']
+            for row in db.execute('PRAGMA table_info(place_prospects)')
+        ]
+        if 'lead_id' not in columns:
+            db.execute(
+                'ALTER TABLE place_prospects ADD COLUMN lead_id INTEGER'
+            )
     print(f'LeadFlow AI: http://127.0.0.1:{PORT}')
     print('Mode:', 'Real AI' if os.environ.get('OPENAI_API_KEY') else 'Demo rules (not AI)')
     print('Ctrl+C to stop.')
