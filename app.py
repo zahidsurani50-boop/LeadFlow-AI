@@ -17,7 +17,7 @@ DB_PATH = (
     if os.environ.get('PUBLIC_DEMO', '0') == '1'
     else Path(os.environ.get('LEADFLOW_DB', str(ROOT / 'data' / 'leadflow.db')))
 )
-PORT = int(os.environ.get('LEADFLOW_PORT', '9000'))
+PORT = int(os.environ.get('PORT', os.environ.get('LEADFLOW_PORT', '9000')))
 
 # Public portfolio demo configuration
 PUBLIC_DEMO = os.environ.get('PUBLIC_DEMO', '0') == '1'
@@ -949,4 +949,4 @@ if __name__=='__main__':
     print(f'LeadFlow AI: http://127.0.0.1:{PORT}')
     print('Mode:', 'Real AI' if os.environ.get('OPENAI_API_KEY') else 'Demo rules (not AI)')
     print('Ctrl+C to stop.')
-    ThreadingHTTPServer(('127.0.0.1',PORT),Handler).serve_forever()
+    ThreadingHTTPServer((os.environ.get('LEADFLOW_HOST', '127.0.0.1'),PORT),Handler).serve_forever()
